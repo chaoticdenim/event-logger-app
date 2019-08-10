@@ -3,28 +3,24 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/material.dart';
-
-class TypeToName {
-  static final Map map = {
-    0: "sad",
-    1: "angry",
-    2: "slightly upset",
-    3: "ok",
-    4: "happy",
-    5: "super happy",
-  };
-  static String getMoodName(int mood_type) {
-    return TypeToName.map[mood_type];
-  }
-}
+import 'mood_button.dart';
+import 'moods.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class DatabaseUtils {
+  DatabaseUtils._();
+  static final DatabaseUtils db = DatabaseUtils._();
+  static Database _database;
 
-  final Database database;
+  Future<Database> get database async {
+    if (_database != null)
+    return _database;
 
-  DatabaseUtils(this.database);
+    _database = await initMoodDatabase();
+    return _database;
+  }
 
-  static Future<Database> initMoodDatabase() async {
+  initMoodDatabase() async {
     return openDatabase(
       // Set the path to the database. Note: Using the `join` function from the
       // `path` package is best practice to ensure the path is correctly
@@ -34,30 +30,20 @@ class DatabaseUtils {
       onCreate: (db, version) {
         return db.execute(
           """
-          CREATE TABLE moods(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, mood_type INTEGER, timestamp TEXT);
-          CREATE TABLE mood_types_table(id INTEGER PRIMARY KEY, name TEXT);
-
-          INSERT INTO mood_types_table (id, name)
-          VALUES 
-          (0, 'sad'),
-          (1, 'angry'),
-          (2, 'slightly upset'),
-          (3, 'ok'),
-          (4, 'happy'),
-          (5, 'super happy');
+          CREATE TABLE moods(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, moodId INTEGER, timestamp TEXT);
           """,
         );
       },
       // Set the version. This executes the onCreate function and provides a
       // path to perform database upgrades and downgrades.
-      version: 2,
+      version: 3,
     );
   }
 
 
   Future<void> insertMood(MoodEntry mood) async {
     // Get a reference to the database.
-    final Database db = database;
+    final Database db = await database;
 
     // Insert the Dog into the correct table. Also specify the
     // `conflictAlgorithm`. In this case, if the same dog is inserted
@@ -69,29 +55,18 @@ class DatabaseUtils {
     );
   }
 
-  Future<MoodEntry> fetchMood(int id) async {
-    final Future<List<Map<String, dynamic>>> futureMaps = database.query('moods', where: 'id = ?', whereArgs: [id]);
-    var maps = await futureMaps;
-
-    if (maps.length != 0) {
-      return MoodEntry.fromDb(maps.first);
-    }
-
-    return null;
-  }
-
-  Future<List<MoodEntry>> moods() async {
+  Future<List<MoodEntry>> getAllMoods() async {
     // Get a reference to the database.
-    final Database db = database;
+    final Database db = await database;
 
     // Query the table for all The Dogs.
     final List<Map<String, dynamic>> maps = await db.query('moods');
 
     // Convert the List<Map<String, dynamic> into a List<Dog>.
     return List.generate(maps.length, (i) {
-      return MoodEntry(
+      return MoodEntry.fromDb(
         id: maps[i]['id'],
-        mood_type: maps[i]['mood_type'],
+        moodId: maps[i]['moodId'],
         timestamp: maps[i]['timestamp'],
       );
     });
@@ -99,7 +74,7 @@ class DatabaseUtils {
 
   Future<void> updateMood(MoodEntry mood) async {
     // Get a reference to the database.
-    final db = database;
+    final Database db = await database;
 
     // Update the given Dog.
     await db.update(
@@ -114,7 +89,7 @@ class DatabaseUtils {
 
   Future<void> deleteMood(int id) async {
     // Get a reference to the database.
-    final db = database;
+    final Database db = await database;
 
     // Remove the Dog from the database.
     await db.delete(
@@ -129,34 +104,39 @@ class DatabaseUtils {
 
 void main() async {
 
-  final Database db = await DatabaseUtils.initMoodDatabase();
-  DatabaseUtils db_helper = DatabaseUtils(db);
-  // final int id = await db_helper.getLastId();
-  var arbitraryId = 0;
-  var user_input = 2;
+  // final Database db = await DatabaseUtils.initMoodDatabase();
+  // DatabaseUtils dbHelper = DatabaseUtils(db);
 
-  for (var i = 0; i < 12; i++) {
-    db_helper.deleteMood(i);
+  for (var i = 0; i < 100; i++) {
+    DatabaseUtils.db.deleteMood(i);
   }
-    print(await db_helper.moods());
-    runApp(
-    new MaterialApp(
-      title: "Mood Logger",
-      home: new Scaffold(
-        appBar: new AppBar(
-          title: new Text("Mood Logger"),
-        ),
-      ),
-    ),
-  );
+
+  // var mood = new MoodEntry(moodId: 1);
+  // dbHelper.insertMood(mood);
+
+  // print(await dbHelper.moods());
+  runApp(MoodLoggerApp());
 }
 
 class MoodLoggerApp extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
-      title: "r",
+      title: "Mood Logger",
       home: new MoodScreen(),
+      theme: ThemeData(
+        brightness: Brightness.light,
+        primaryColor: Colors.lightBlue[800],
+        accentColor: Colors.cyan[600],
+        fontFamily: 'Roboto',
+
+        textTheme: TextTheme(
+          headline: TextStyle(fontSize: 72.0, fontWeight: FontWeight.bold),
+          title: TextStyle(fontSize: 36.0, fontStyle: FontStyle.normal),
+          button: TextStyle(fontSize: 24.0)
+        )
+      ),
     );
   }
 }
@@ -164,14 +144,94 @@ class MoodLoggerApp extends StatelessWidget {
 class MoodScreen extends StatefulWidget {
   @override
   State createState() => new MoodScreenState();
+  
+}
+
+class MoodScreenState extends State<MoodScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text("Mood Logger"),
+        backgroundColor: Theme.of(context).primaryColor,),
+        body: FutureBuilder<List<MoodEntry>>(
+              future: DatabaseUtils.db.getAllMoods(),
+              builder: (BuildContext context, AsyncSnapshot<List<MoodEntry>> snapshot) {
+                if (snapshot.hasData) {
+                  return ListView.builder(
+                    itemCount: snapshot.data.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      MoodEntry item = snapshot.data[index];
+                      return ListTile(
+                        title: Text(MoodToName.getMoodName(item.moodId) + " " + MoodToName.getMoodEmoji(item.moodId)),
+                        leading: Text(item.id.toString()),
+                        trailing: Text(item.timestamp),
+                      );
+                    },
+                  );
+                } else {
+                  return Center(child: CircularProgressIndicator(semanticsLabel: "loading...",));
+                }
+              },
+            ),
+        floatingActionButton: SpeedDial(
+          animatedIcon: AnimatedIcons.menu_close,
+          animatedIconTheme: IconThemeData(size: 22.0),
+          closeManually: false,
+          curve: Curves.bounceIn,
+          overlayColor: Colors.black,
+          onClose: () => setState(() {}),
+          elevation: 8.0,
+          shape: CircleBorder(),
+          children: [
+            SpeedDialChild(
+              child: Text(MoodToName.getMoodEmoji(0)),
+              label: MoodToName.getMoodName(0),
+              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 0))
+            ),
+            SpeedDialChild(
+              child: Text(MoodToName.getMoodEmoji(1)),
+              label: MoodToName.getMoodName(1),
+              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 1))
+            ),
+            SpeedDialChild(
+              child: Text(MoodToName.getMoodEmoji(2)),
+              label: MoodToName.getMoodName(2),
+              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 2))
+            ),
+            SpeedDialChild(
+              child: Text(MoodToName.getMoodEmoji(3)),
+              label: MoodToName.getMoodName(3),
+              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 3))
+            ),
+            SpeedDialChild(
+              child: Text(MoodToName.getMoodEmoji(4)),
+              label: MoodToName.getMoodName(4),
+              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 4))
+            ),SpeedDialChild(
+              child: Text(MoodToName.getMoodEmoji(5)),
+              label: MoodToName.getMoodName(5),
+              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 5))
+            ),
+          ],
+        ),
+    );
+  }
+
   Widget _buildMoodInput() {
     return new Container(
       margin: const EdgeInsets.symmetric(horizontal: 8.0),
       child: new Row(
         children: <Widget>[
-          new IconButton(
-            icon: new Icon(Icons.send),
-            onPressed: () => print("lolilol"),
+          new CustomButton(
+            id: 0,
+            onPressed: () async {
+              await DatabaseUtils.db.insertMood(
+                MoodEntry(
+                  moodId: 0
+                )
+              );
+            },
           )
         ],
       ),
@@ -179,41 +239,27 @@ class MoodScreen extends StatefulWidget {
   }
 }
 
-class MoodScreenState extends State<MoodScreen> {
-  @override
-  Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(title: new Text("ta mere la chienne"),),
-    );
-  }
-}
-
 class MoodEntry {
   final int id;
-  final int mood_type;
+  final int moodId;
   final String timestamp; 
 
-  MoodEntry.initialize({this.id, this.mood_type}) :
+  MoodEntry({this.id, this.moodId}) :
     timestamp = new DateFormat("HH:mm dd-MM-yyyy").format(new DateTime.now());
-
-  MoodEntry.fromDb(Map<String, dynamic> map)
-  : id = map["id"],
-  mood_type = map["mood_type"],
-  timestamp = map["timestamp"];
   
-  MoodEntry({this.id, this.mood_type, this.timestamp}); // default constructor
+  MoodEntry.fromDb({this.id, this.moodId, this.timestamp}); // default constructor
   
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'mood_type': mood_type,
+      'moodId': moodId,
       'timestamp': timestamp
     };
   }
 
   @override
   String toString() {
-    String name = TypeToName.getMoodName(mood_type);
-    return 'MoodEntry: {id: $id, mood_type: $mood_type, mood name: $name, timestamp: $timestamp}';
+    String emoji = MoodToName.getMoodEmoji(moodId);
+    return 'MoodEntry: {id: $id, moodId: $moodId, mood: $emoji, timestamp: $timestamp}';
   }
 }
