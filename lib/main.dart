@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:mood_logger/analytics_widget.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class DatabaseUtils {
       },
       // Set the version. This executes the onCreate function and provides a
       // path to perform database upgrades and downgrades.
-      version: 3,
+      version: 2,
     );
   }
 
@@ -107,10 +108,6 @@ void main() async {
   // final Database db = await DatabaseUtils.initMoodDatabase();
   // DatabaseUtils dbHelper = DatabaseUtils(db);
 
-  for (var i = 0; i < 100; i++) {
-    DatabaseUtils.db.deleteMood(i);
-  }
-
   // var mood = new MoodEntry(moodId: 1);
   // dbHelper.insertMood(mood);
 
@@ -148,12 +145,63 @@ class MoodScreen extends StatefulWidget {
 }
 
 class MoodScreenState extends State<MoodScreen> {
+  int _navIndex = 0;
+  final List<Widget> _children = [
+    FutureBuilder<List<MoodEntry>>(
+              future: DatabaseUtils.db.getAllMoods(),
+              builder: (BuildContext context, AsyncSnapshot<List<MoodEntry>> snapshot) {
+                if (snapshot.hasData) {
+                  return ListView.builder(
+                    itemCount: snapshot.data.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      MoodEntry item = snapshot.data[index];
+                      return ListTile(
+                        title: Text(MoodToName.getMoodName(item.moodId) + " " + MoodToName.getMoodEmoji(item.moodId)),
+                        leading: Text(item.id.toString()),
+                        trailing: Text(item.timestamp),
+                      );
+                    },
+                  );
+                } else {
+                  return Center(child: CircularProgressIndicator());
+                }
+              },
+            ),
+    AnalyticsWidget(Colors.green),
+    AnalyticsWidget(Colors.indigo)
+    
+  ];
   @override
+
+  void onTabTapped(int index) {
+    setState(() {
+      _navIndex = index;
+    });
+  }
+
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
         title: new Text("Mood Logger"),
         backgroundColor: Theme.of(context).primaryColor,),
+        bottomNavigationBar: BottomNavigationBar(
+          onTap: onTabTapped,
+          currentIndex: _navIndex,
+          items: [
+            BottomNavigationBarItem(
+              icon: new Icon(Icons.sentiment_satisfied),
+              title: new Text('Moods'),
+            ),
+            BottomNavigationBarItem(
+              icon: new Icon(Icons.timeline),
+              title: new Text('Analytics'),
+            ),
+            BottomNavigationBarItem(
+              icon: new Icon(Icons.bubble_chart),
+              title: new Text('AI'),
+            ),
+          ]
+        ),
         body: FutureBuilder<List<MoodEntry>>(
               future: DatabaseUtils.db.getAllMoods(),
               builder: (BuildContext context, AsyncSnapshot<List<MoodEntry>> snapshot) {
@@ -170,71 +218,54 @@ class MoodScreenState extends State<MoodScreen> {
                     },
                   );
                 } else {
-                  return Center(child: CircularProgressIndicator(semanticsLabel: "loading...",));
+                  return Center(child: CircularProgressIndicator());
                 }
               },
             ),
-        floatingActionButton: SpeedDial(
-          animatedIcon: AnimatedIcons.menu_close,
-          animatedIconTheme: IconThemeData(size: 22.0),
-          closeManually: false,
-          curve: Curves.bounceIn,
-          overlayColor: Colors.black,
-          onClose: () => setState(() {}),
-          elevation: 8.0,
-          shape: CircleBorder(),
-          children: [
-            SpeedDialChild(
-              child: Text(MoodToName.getMoodEmoji(0)),
-              label: MoodToName.getMoodName(0),
-              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 0))
-            ),
-            SpeedDialChild(
-              child: Text(MoodToName.getMoodEmoji(1)),
-              label: MoodToName.getMoodName(1),
-              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 1))
-            ),
-            SpeedDialChild(
-              child: Text(MoodToName.getMoodEmoji(2)),
-              label: MoodToName.getMoodName(2),
-              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 2))
-            ),
-            SpeedDialChild(
-              child: Text(MoodToName.getMoodEmoji(3)),
-              label: MoodToName.getMoodName(3),
-              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 3))
-            ),
-            SpeedDialChild(
-              child: Text(MoodToName.getMoodEmoji(4)),
-              label: MoodToName.getMoodName(4),
-              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 4))
-            ),SpeedDialChild(
-              child: Text(MoodToName.getMoodEmoji(5)),
-              label: MoodToName.getMoodName(5),
-              onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 5))
-            ),
-          ],
-        ),
-    );
-  }
-
-  Widget _buildMoodInput() {
-    return new Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: new Row(
-        children: <Widget>[
-          new CustomButton(
-            id: 0,
-            onPressed: () async {
-              await DatabaseUtils.db.insertMood(
-                MoodEntry(
-                  moodId: 0
-                )
-              );
-            },
-          )
-        ],
-      ),
+        floatingActionButton: new Visibility (
+          visible: _navIndex == 0, 
+          child: SpeedDial(
+            animatedIcon: AnimatedIcons.menu_close,
+            animatedIconTheme: IconThemeData(size: 22.0),
+            closeManually: false,
+            curve: Curves.bounceIn,
+            overlayColor: Colors.black,
+            onClose: () => setState(() {}),
+            elevation: 8.0,
+            shape: CircleBorder(),
+            children: [
+              SpeedDialChild(
+                child: Text(MoodToName.getMoodEmoji(0)),
+                label: MoodToName.getMoodName(0),
+                onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 0))
+              ),
+              SpeedDialChild(
+                child: Text(MoodToName.getMoodEmoji(1)),
+                label: MoodToName.getMoodName(1),
+                onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 1))
+              ),
+              SpeedDialChild(
+                child: Text(MoodToName.getMoodEmoji(2)),
+                label: MoodToName.getMoodName(2),
+                onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 2))
+              ),
+              SpeedDialChild(
+                child: Text(MoodToName.getMoodEmoji(3)),
+                label: MoodToName.getMoodName(3),
+                onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 3))
+              ),
+              SpeedDialChild(
+                child: Text(MoodToName.getMoodEmoji(4)),
+                label: MoodToName.getMoodName(4),
+                onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 4))
+              ),SpeedDialChild(
+                child: Text(MoodToName.getMoodEmoji(5)),
+                label: MoodToName.getMoodName(5),
+                onTap: () => DatabaseUtils.db.insertMood(MoodEntry(moodId: 5))
+              ),
+            ],
+          ),
+        )
     );
   }
 }
