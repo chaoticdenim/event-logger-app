@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/material.dart';
 
 class TypeToName {
   static final Map map = {
@@ -52,14 +53,6 @@ class DatabaseUtils {
       version: 2,
     );
   }
-
-  // static Future<String> getMoodType(String name, database) async {
-  //   final Database db = await database;
-
-  //   var dbQuery = await db.query(
-  //     'name'
-  //   )
-  // }
 
 
   Future<void> insertMood(MoodEntry mood) async {
@@ -119,17 +112,6 @@ class DatabaseUtils {
     );
   }
 
-  // int getLastId() async {
-  //   try {
-  //     final db = database;
-  //     int last_id = Sqflite.firstIntValue(db.rawQuery('SELECT MAX(moods.id) FROM moods'));
-  //     return last_id;
-  //   }
-  //   catch(e) {
-  //     print(e);
-  //   }
-  // }
-
   Future<void> deleteMood(int id) async {
     // Get a reference to the database.
     final db = database;
@@ -153,23 +135,57 @@ void main() async {
   var arbitraryId = 0;
   var user_input = 2;
 
-  // Insert a mood into the database.
-  // for (var i = 0; i < 5; i++) {
-  //   var to_add = new MoodEntry.initialize(
-  //       id: i,
-  //       mood_type: user_input,
-  //   );
-  //   await db_helper.insertMood(to_add);
-  // }
-  var to_add = new MoodEntry.initialize(
-        mood_type: user_input,
-    );
-    await db_helper.insertMood(to_add);
+  for (var i = 0; i < 12; i++) {
+    db_helper.deleteMood(i);
+  }
     print(await db_helper.moods());
-  
+    runApp(
+    new MaterialApp(
+      title: "Mood Logger",
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: new Text("Mood Logger"),
+        ),
+      ),
+    ),
+  );
+}
 
-  // Print the list of dogs (only Fido for now).
+class MoodLoggerApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      title: "r",
+      home: new MoodScreen(),
+    );
+  }
+}
 
+class MoodScreen extends StatefulWidget {
+  @override
+  State createState() => new MoodScreenState();
+  Widget _buildMoodInput() {
+    return new Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: new Row(
+        children: <Widget>[
+          new IconButton(
+            icon: new Icon(Icons.send),
+            onPressed: () => print("lolilol"),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class MoodScreenState extends State<MoodScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(title: new Text("ta mere la chienne"),),
+    );
+  }
 }
 
 class MoodEntry {
