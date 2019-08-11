@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:mood_logger/screens/analytics_widget.dart';
 import 'package:flutter/material.dart';
 import 'moods.dart';
@@ -74,7 +73,6 @@ class MoodScreenState extends State<MoodScreen> {
     AnalyticsWidget(Colors.indigo)
     
   ];
-  @override
 
   void onTabTapped(int index) {
     setState(() {
