@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'moods.dart';
+import 'package:mood_logger/moods.dart';
 
  class CustomButton extends StatelessWidget {
   final GestureTapCallback onPressed;
@@ -23,6 +23,4 @@ import 'moods.dart';
       shape: const StadiumBorder(),
     );
   }
-
-
 }

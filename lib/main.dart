@@ -1,107 +1,10 @@
 import 'dart:async';
-import 'package:intl/intl.dart';
-import 'package:mood_logger/analytics_widget.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:mood_logger/screens/analytics_widget.dart';
 import 'package:flutter/material.dart';
-import 'mood_button.dart';
 import 'moods.dart';
+import 'database.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
-class DatabaseUtils {
-  DatabaseUtils._();
-  static final DatabaseUtils db = DatabaseUtils._();
-  static Database _database;
-
-  Future<Database> get database async {
-    if (_database != null)
-    return _database;
-
-    _database = await initMoodDatabase();
-    return _database;
-  }
-
-  initMoodDatabase() async {
-    return openDatabase(
-      // Set the path to the database. Note: Using the `join` function from the
-      // `path` package is best practice to ensure the path is correctly
-      // constructed for each platform.
-      join(await getDatabasesPath(), 'moods_database.db'),
-      // When the database is first created, create a table to store dogs.
-      onCreate: (db, version) {
-        return db.execute(
-          """
-          CREATE TABLE moods(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, moodId INTEGER, timestamp TEXT);
-          """,
-        );
-      },
-      // Set the version. This executes the onCreate function and provides a
-      // path to perform database upgrades and downgrades.
-      version: 2,
-    );
-  }
-
-
-  Future<void> insertMood(MoodEntry mood) async {
-    // Get a reference to the database.
-    final Database db = await database;
-
-    // Insert the Dog into the correct table. Also specify the
-    // `conflictAlgorithm`. In this case, if the same dog is inserted
-    // multiple times, it replaces the previous data.
-    await db.insert(
-      'moods',
-      mood.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace
-    );
-  }
-
-  Future<List<MoodEntry>> getAllMoods() async {
-    // Get a reference to the database.
-    final Database db = await database;
-
-    // Query the table for all The Dogs.
-    final List<Map<String, dynamic>> maps = await db.query('moods');
-
-    // Convert the List<Map<String, dynamic> into a List<Dog>.
-    return List.generate(maps.length, (i) {
-      return MoodEntry.fromDb(
-        id: maps[i]['id'],
-        moodId: maps[i]['moodId'],
-        timestamp: maps[i]['timestamp'],
-      );
-    });
-  }
-
-  Future<void> updateMood(MoodEntry mood) async {
-    // Get a reference to the database.
-    final Database db = await database;
-
-    // Update the given Dog.
-    await db.update(
-      'moods',
-      mood.toMap(),
-      // Ensure that the Dog has a matching id.
-      where: "id = ?",
-      // Pass the Dog's id as a whereArg to prevent SQL injection.
-      whereArgs: [mood.id],
-    );
-  }
-
-  Future<void> deleteMood(int id) async {
-    // Get a reference to the database.
-    final Database db = await database;
-
-    // Remove the Dog from the database.
-    await db.delete(
-      'moods',
-      // Use a `where` clause to delete a specific dog.
-      where: "id = ?",
-      // Pass the Dog's id as a whereArg to prevent SQL injection.
-      whereArgs: [id],
-    );
-  }
-}
 
 void main() async {
 
@@ -267,30 +170,5 @@ class MoodScreenState extends State<MoodScreen> {
           ),
         )
     );
-  }
-}
-
-class MoodEntry {
-  final int id;
-  final int moodId;
-  final String timestamp; 
-
-  MoodEntry({this.id, this.moodId}) :
-    timestamp = new DateFormat("HH:mm dd-MM-yyyy").format(new DateTime.now());
-  
-  MoodEntry.fromDb({this.id, this.moodId, this.timestamp}); // default constructor
-  
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'moodId': moodId,
-      'timestamp': timestamp
-    };
-  }
-
-  @override
-  String toString() {
-    String emoji = MoodToName.getMoodEmoji(moodId);
-    return 'MoodEntry: {id: $id, moodId: $moodId, mood: $emoji, timestamp: $timestamp}';
   }
 }
