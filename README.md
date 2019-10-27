@@ -1,16 +1,17 @@
 # mood_logger
 
-A new Flutter project.
+A Flutter project.
 
-## Getting Started
+## Overview
 
-This project is a starting point for a Flutter application.
+The idea was to try to predict something highly unpredictable, using user input acquired through a Flutter app. At any given time, the user goes into the app and logs their current mood. From that data, the system then tries to predict future moods.
 
-A few resources to get you started if this is your first Flutter project:
+## Progress
+[x] Action Button UI
+[x] Mood list UI
+[x] Database handler class
+[] onCreate POST request to send user data to backend
+[] Backend API computing ML Logistic regression
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.dev/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+## Running it on your phone (only tested on Android)
+`flutter run`
